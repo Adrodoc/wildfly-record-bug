@@ -1,0 +1,9 @@
+apply plugin: 'eclipse'
+apply plugin: 'java'
+apply plugin: 'application'
+mainClassName = 'org.wildfly.bug.record.client.MyClient'
+
+dependencies {
+  implementation project(':interfaces')
+  implementation 'org.wildfly:wildfly-client-all:26.1.2.Final'
+}

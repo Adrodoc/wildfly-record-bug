@@ -1,0 +1,49 @@
+apply plugin: 'eclipse'
+apply plugin: 'java'
+apply plugin: 'war'
+
+configurations {
+  wildfly
+}
+
+dependencies {
+  implementation project(':interfaces')
+  implementation 'javax:javaee-api:8.0.1'
+
+  wildfly "org.wildfly:wildfly-dist:${versions.wildfly}@zip"
+}
+
+File wildFlyDir = new File(buildDir, 'wildfly')
+
+task downloadServer(type: Copy) {
+  from configurations.wildfly
+  into temporaryDir
+}
+
+task installServer(type: Copy) {
+  dependsOn downloadServer
+  from zipTree(new File(downloadServer.temporaryDir, "wildfly-dist-${versions.wildfly}.zip"))
+  into wildFlyDir
+}
+
+task startServer {
+  dependsOn installServer
+  doLast {
+    ProcessBuilder processBuilder = new ProcessBuilder('cmd', '/c', 'standalone.bat')
+    processBuilder.directory(new File(wildFlyDir, "wildfly-${versions.wildfly}/bin"))
+    processBuilder.environment().put('JAVA_HOME', org.gradle.internal.jvm.Jvm.current().javaHome.absolutePath)
+    processBuilder.start().consumeProcessOutput(System.out, System.err)
+  }
+}
+
+task deployServer(type: Exec) {
+  dependsOn war
+  workingDir new File(wildFlyDir, "wildfly-${versions.wildfly}/bin")
+  commandLine 'cmd', '/c', "jboss-cli.bat -c \"deploy --force ${war.archiveFile.get()}\""
+}
+
+task stopServer(type: Exec) {
+  dependsOn war
+  workingDir new File(wildFlyDir, "wildfly-${versions.wildfly}/bin")
+  commandLine 'cmd', '/c', "jboss-cli.bat -c shutdown"
+}
